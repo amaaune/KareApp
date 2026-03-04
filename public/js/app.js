@@ -36,8 +36,6 @@ let activeFilter = '';
 const CATEGORY_LABELS = {
   alimentaire: '🍎 Alimentaire',
   transport:   '🚗 Transport',
-  logement:    '🏠 Logement',
-  sante:       '💊 Santé',
   loisirs:     '🎮 Loisirs',
   autre:       '📦 Autre',
 };
@@ -207,14 +205,17 @@ form.addEventListener('submit', async (e) => {
     const data = await res.json();
 
     if (!res.ok) {
-      showError((data.errors || [data.error]).join(' • '));
+      const msg = Array.isArray(data.errors) ? data.errors.join(' • ') : (data.error || 'Erreur serveur');
+      showError(msg);
+      console.error('Validation error:', data);
       return;
     }
 
     resetForm();
     loadExpenses();
-  } catch {
-    showError('Erreur réseau.');
+  } catch (err) {
+    console.error('Submit error:', err);
+    showError('Erreur réseau : ' + err.message);
   }
 });
 

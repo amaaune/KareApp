@@ -151,34 +151,42 @@ tr:hover td { background: #f8fafc; }
 .filter-btn:hover  { background: #cbd5e1; }
 .filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
-/* ── Totals grid ─────────────────────────── */
-#totals-grid {
+/* ── Chart camembert ─────────────────────── */
+#chart-wrap {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 8px 0;
+}
+#stats-chart {
+  max-width: 220px;
+  max-height: 220px;
+}
+#chart-legend {
+  list-style: none;
+  padding: 0;
+  margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
+  min-width: 160px;
 }
-.total-item {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-rows: auto 6px;
+#chart-legend li {
+  display: flex;
   align-items: center;
-  gap: 4px 16px;
+  gap: 8px;
+  font-size: .93rem;
 }
-.total-label  { font-weight: 600; font-size: .95rem; }
-.total-amount { font-weight: 700; color: var(--primary); font-size: .95rem; text-align: right; }
-.total-bar-wrap {
-  grid-column: 1 / -1;
-  background: var(--border);
-  border-radius: 999px;
-  height: 6px;
-  overflow: hidden;
+.legend-dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
-.total-bar {
-  height: 100%;
-  background: var(--primary);
-  border-radius: 999px;
-  transition: width .4s ease;
-}
+.legend-cat { flex: 1; font-weight: 600; }
+.legend-val { font-weight: 700; color: var(--primary); }
 
 /* ── Helpers ─────────────────────────── */
 .hidden { display: none !important; }

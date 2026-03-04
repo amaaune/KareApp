@@ -12,12 +12,16 @@ const submitBtn   = document.getElementById('submit-btn');
 const cancelBtn   = document.getElementById('cancel-btn');
 const formError   = document.getElementById('form-error');
 
-const loadingEl  = document.getElementById('loading');
-const emptyEl    = document.getElementById('empty');
-const tableEl    = document.getElementById('expenses-table');
-const tbody      = document.getElementById('expenses-body');
-const totalBadge = document.getElementById('total-badge');
-const totalsGrid = document.getElementById('totals-grid');
+const loadingEl   = document.getElementById('loading');
+const emptyEl     = document.getElementById('empty');
+const tableEl     = document.getElementById('expenses-table');
+const tbody       = document.getElementById('expenses-body');
+const totalBadge  = document.getElementById('total-badge');
+const chartWrap   = document.getElementById('chart-wrap');
+const totalsEmpty = document.getElementById('totals-empty');
+const chartLegend = document.getElementById('chart-legend');
+const chartCanvas = document.getElementById('stats-chart');
+let   pieChart    = null;
 
 // Modal elements
 const modalOverlay = document.getElementById('modal-overlay');
@@ -92,53 +96,65 @@ function applyFilter() {
   renderTable(filtered);
 }
 
-// ── Totaux par catégorie ───────────────────────────────────────────────────
-function renderTotals(expenses) {
-  const totals = {};
-  expenses.forEach(e => {
-    totals[e.category] = (totals[e.category] || 0) + parseFloat(e.amount);
-  });
+// ── Palette couleurs camembert ─────────────────────────────────────────────
+const CHART_COLORS = {
+  alimentaire: '#4CAF50',
+  transport:   '#2196F3',
+  loisirs:     '#FF9800',
+  autre:       '#9C27B0',
+};
 
-  if (!Object.keys(totals).length) {
-    totalsGrid.innerHTML = '<p class="info">Aucune dépense enregistrée.</p>';
+// ── Rendu camembert ────────────────────────────────────────────────────────
+function renderPieChart(rows) {
+  // rows : [{category, total}] ou [{category, amount}]
+  if (!Array.isArray(rows) || !rows.length) {
+    chartWrap.classList.add('hidden');
+    totalsEmpty.classList.remove('hidden');
     return;
   }
+  chartWrap.classList.remove('hidden');
+  totalsEmpty.classList.add('hidden');
 
-  totalsGrid.innerHTML = Object.entries(totals)
-    .sort((a, b) => b[1] - a[1])
-    .map(([cat, sum]) => `
-      <div class="total-item">
-        <span class="total-label">${CATEGORY_LABELS[cat] || cat}</span>
-        <span class="total-amount">${sum.toFixed(2)} €</span>
-        <div class="total-bar-wrap">
-          <div class="total-bar" style="width:${Math.min(100, (sum / expenses.reduce((a,e) => a + parseFloat(e.amount), 0)) * 100).toFixed(1)}%"></div>
-        </div>
-      </div>`)
-    .join('');
+  const labels  = rows.map(r => CATEGORY_LABELS[r.category] || r.category);
+  const values  = rows.map(r => parseFloat(r.total ?? r.amount ?? 0));
+  const colors  = rows.map(r => CHART_COLORS[r.category] || '#607D8B');
+  const total   = values.reduce((a, v) => a + v, 0);
+
+  if (pieChart) pieChart.destroy();
+  pieChart = new Chart(chartCanvas, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
+    options: {
+      cutout: '55%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.formattedValue} € (${((ctx.parsed / total) * 100).toFixed(1)} %)`,
+          },
+        },
+      },
+    },
+  });
+
+  // Légende manuelle
+  chartLegend.innerHTML = rows.map((r, i) => `
+    <li>
+      <span class="legend-dot" style="background:${colors[i]}"></span>
+      <span class="legend-cat">${labels[i]}</span>
+      <span class="legend-val">${values[i].toFixed(2)} €</span>
+    </li>`).join('');
+}
+
+function renderTotals(expenses) {
+  const map = {};
+  expenses.forEach(e => { map[e.category] = (map[e.category] || 0) + parseFloat(e.amount); });
+  const rows = Object.entries(map).map(([category, total]) => ({ category, total }));
+  renderPieChart(rows.sort((a, b) => b.total - a.total));
 }
 
 function renderTotalsFromStats(stats) {
-  if (!Array.isArray(stats) || stats.length === 0) {
-    totalsGrid.innerHTML = '<p class="info">Aucune dépense enregistrée.</p>';
-    return;
-  }
-
-  const totalSum = stats.reduce((s, r) => s + parseFloat(r.total || 0), 0);
-  totalsGrid.innerHTML = stats
-    .sort((a, b) => parseFloat(b.total) - parseFloat(a.total))
-    .map(row => {
-      const cat = row.category;
-      const sum = parseFloat(row.total || 0);
-      const pct = totalSum ? Math.min(100, (sum / totalSum) * 100).toFixed(1) : 0;
-      return `
-      <div class="total-item">
-        <span class="total-label">${CATEGORY_LABELS[cat] || cat}</span>
-        <span class="total-amount">${sum.toFixed(2)} €</span>
-        <div class="total-bar-wrap">
-          <div class="total-bar" style="width:${pct}%"></div>
-        </div>
-      </div>`;
-    }).join('');
+  renderPieChart([...stats].sort((a, b) => parseFloat(b.total) - parseFloat(a.total)));
 }
 
 function renderTable(expenses) {

@@ -11,20 +11,25 @@ const submitBtn   = document.getElementById('submit-btn');
 const cancelBtn   = document.getElementById('cancel-btn');
 const formError   = document.getElementById('form-error');
 
-const loadingEl = document.getElementById('loading');
-const emptyEl   = document.getElementById('empty');
-const tableEl   = document.getElementById('expenses-table');
-const tbody     = document.getElementById('expenses-body');
+const loadingEl  = document.getElementById('loading');
+const emptyEl    = document.getElementById('empty');
+const tableEl    = document.getElementById('expenses-table');
+const tbody      = document.getElementById('expenses-body');
 const totalBadge = document.getElementById('total-badge');
+const totalsGrid = document.getElementById('totals-grid');
+
+// ── State ──────────────────────────────────────────────────────────────────
+let allExpenses  = [];
+let activeFilter = '';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const CATEGORY_LABELS = {
-  alimentation: '🍎 Alimentation',
-  transport:    '🚗 Transport',
-  logement:     '🏠 Logement',
-  sante:        '💊 Santé',
-  loisirs:      '🎮 Loisirs',
-  autre:        '📦 Autre',
+  alimentaire: '🍎 Alimentaire',
+  transport:   '🚗 Transport',
+  logement:    '🏠 Logement',
+  sante:       '💊 Santé',
+  loisirs:     '🎮 Loisirs',
+  autre:       '📦 Autre',
 };
 
 function fmtDate(iso) {
@@ -50,24 +55,68 @@ async function loadExpenses() {
 
   try {
     const res  = await fetch(API);
-    const data = await res.json();
-
+    allExpenses = await res.json();
     loadingEl.classList.add('hidden');
-
-    if (!data.length) {
-      emptyEl.classList.remove('hidden');
-      totalBadge.textContent = 'Total : 0.00 €';
-      return;
-    }
-
-    renderTable(data);
+    renderTotals(allExpenses);
+    applyFilter();
   } catch {
     loadingEl.textContent = 'Erreur de connexion à l\'API.';
   }
 }
 
+// ── Filtre ─────────────────────────────────────────────────────────────────
+document.getElementById('filter-bar').addEventListener('click', (e) => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeFilter = btn.dataset.cat;
+  applyFilter();
+});
+
+function applyFilter() {
+  const filtered = activeFilter
+    ? allExpenses.filter(e => e.category === activeFilter)
+    : allExpenses;
+  renderTable(filtered);
+}
+
+// ── Totaux par catégorie ───────────────────────────────────────────────────
+function renderTotals(expenses) {
+  const totals = {};
+  expenses.forEach(e => {
+    totals[e.category] = (totals[e.category] || 0) + parseFloat(e.amount);
+  });
+
+  if (!Object.keys(totals).length) {
+    totalsGrid.innerHTML = '<p class="info">Aucune dépense enregistrée.</p>';
+    return;
+  }
+
+  totalsGrid.innerHTML = Object.entries(totals)
+    .sort((a, b) => b[1] - a[1])
+    .map(([cat, sum]) => `
+      <div class="total-item">
+        <span class="total-label">${CATEGORY_LABELS[cat] || cat}</span>
+        <span class="total-amount">${sum.toFixed(2)} €</span>
+        <div class="total-bar-wrap">
+          <div class="total-bar" style="width:${Math.min(100, (sum / expenses.reduce((a,e) => a + parseFloat(e.amount), 0)) * 100).toFixed(1)}%"></div>
+        </div>
+      </div>`)
+    .join('');
+}
+
 function renderTable(expenses) {
   tbody.innerHTML = '';
+
+  if (!expenses.length) {
+    emptyEl.classList.remove('hidden');
+    tableEl.classList.add('hidden');
+    totalBadge.textContent = activeFilter ? 'Sous-total : 0.00 €' : 'Total : 0.00 €';
+    return;
+  }
+
+  emptyEl.classList.add('hidden');
   let total = 0;
 
   expenses.forEach(e => {
@@ -85,7 +134,8 @@ function renderTable(expenses) {
     tbody.appendChild(tr);
   });
 
-  totalBadge.textContent = `Total : ${total.toFixed(2)} €`;
+  const label = activeFilter ? 'Sous-total' : 'Total';
+  totalBadge.textContent = `${label} : ${total.toFixed(2)} €`;
   tableEl.classList.remove('hidden');
 }
 

@@ -131,6 +131,55 @@ tr:hover td { background: #f8fafc; }
 .btn-delete { background: #fee2e2; color: var(--danger); border-radius: 6px; padding: 5px 12px; font-size: .82rem; margin-left: 6px; }
 .btn-delete:hover { background: #fca5a5; }
 
+/* ── Filter bar ─────────────────────────── */
+#filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.filter-btn {
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: var(--border);
+  color: var(--text);
+  font-size: .85rem;
+  font-weight: 600;
+  border: 2px solid transparent;
+  transition: all .15s;
+}
+.filter-btn:hover  { background: #cbd5e1; }
+.filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+/* ── Totals grid ─────────────────────────── */
+#totals-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.total-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto 6px;
+  align-items: center;
+  gap: 4px 16px;
+}
+.total-label  { font-weight: 600; font-size: .95rem; }
+.total-amount { font-weight: 700; color: var(--primary); font-size: .95rem; text-align: right; }
+.total-bar-wrap {
+  grid-column: 1 / -1;
+  background: var(--border);
+  border-radius: 999px;
+  height: 6px;
+  overflow: hidden;
+}
+.total-bar {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 999px;
+  transition: width .4s ease;
+}
+
 /* ── Helpers ─────────────────────────── */
 .hidden { display: none !important; }
 .info   { text-align: center; color: var(--muted); padding: 24px; }

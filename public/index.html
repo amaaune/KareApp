@@ -41,7 +41,7 @@
           <label for="category">Catégorie</label>
           <select id="category" required>
             <option value="">-- Choisir --</option>
-            <option value="alimentation">🍎 Alimentation</option>
+            <option value="alimentaire">🍎 Alimentaire</option>
             <option value="transport">🚗 Transport</option>
             <option value="logement">🏠 Logement</option>
             <option value="sante">💊 Santé</option>
@@ -59,6 +59,12 @@
       </form>
     </section>
 
+    <!-- Totaux par catégorie -->
+    <section class="card" id="totals-section">
+      <h2>Totaux par catégorie</h2>
+      <div id="totals-grid"></div>
+    </section>
+
     <!-- Tableau des dépenses -->
     <section class="card" id="list-section">
       <div class="list-header">
@@ -66,8 +72,19 @@
         <span id="total-badge">Total : 0.00 €</span>
       </div>
 
+      <!-- Filtre par catégorie -->
+      <div id="filter-bar">
+        <button class="filter-btn active" data-cat="">Toutes</button>
+        <button class="filter-btn" data-cat="alimentaire">🍎 Alimentaire</button>
+        <button class="filter-btn" data-cat="transport">🚗 Transport</button>
+        <button class="filter-btn" data-cat="logement">🏠 Logement</button>
+        <button class="filter-btn" data-cat="sante">💊 Santé</button>
+        <button class="filter-btn" data-cat="loisirs">🎮 Loisirs</button>
+        <button class="filter-btn" data-cat="autre">📦 Autre</button>
+      </div>
+
       <div id="loading" class="info">Chargement…</div>
-      <div id="empty" class="info hidden">Aucune dépense enregistrée.</div>
+      <div id="empty" class="info hidden">Aucune dépense pour ce filtre.</div>
 
       <table id="expenses-table" class="hidden">
         <thead>

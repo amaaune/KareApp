@@ -1,4 +1,4 @@
-const VALID_CATEGORIES = ['alimentation', 'transport', 'logement', 'sante', 'loisirs', 'autre'];
+const VALID_CATEGORIES = ['alimentaire', 'transport', 'logement', 'sante', 'loisirs', 'autre'];
 
 /**
  * Valide les champs d'une dépense.

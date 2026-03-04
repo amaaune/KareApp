@@ -23,10 +23,11 @@ describe('Expenses API', () => {
 
   // Teste la récupération de toutes les dépenses et le filtrage par catégorie.
   describe('GET /api/expenses', () => {
+    // Cas succès: l'API renvoie la liste complète.
     it('returns all expenses', async () => {
       pool.query.mockResolvedValueOnce({
         rows: [
-          { id: 1, label: 'Courses', amount: '42.50', category: 'transport', date: '2026-03-01' },
+          { id: 1, description: 'Courses', amount: '42.50', category: 'transport', date: '2026-03-01' },
         ],
       });
 
@@ -36,8 +37,8 @@ describe('Expenses API', () => {
       expect(response.body).toEqual([
         {
           id: 1,
-          label: 'Courses',
           description: 'Courses',
+          label: 'Courses',
           amount: '42.50',
           category: 'transport',
           date: '2026-03-01',
@@ -46,9 +47,10 @@ describe('Expenses API', () => {
       expect(pool.query).toHaveBeenCalledWith('SELECT * FROM expenses ORDER BY date DESC');
     });
 
+    // Cas succès: l'API filtre correctement sur la catégorie demandée.
     it('filters by category when query parameter is provided', async () => {
       pool.query.mockResolvedValueOnce({
-        rows: [{ id: 2, label: 'Bus', amount: '12.00', category: 'transport', date: '2026-03-02' }],
+        rows: [{ id: 2, description: 'Bus', amount: '12.00', category: 'transport', date: '2026-03-02' }],
       });
 
       const response = await request(app).get('/api/expenses?category=transport');
@@ -83,10 +85,11 @@ describe('Expenses API', () => {
 
   // Teste la récupération d'une dépense par son id.
   describe('GET /api/expenses/:id', () => {
+    // Cas succès: la dépense existe.
     it('returns one expense by id', async () => {
       pool.query.mockResolvedValueOnce({
         rowCount: 1,
-        rows: [{ id: 3, label: 'Cinema', amount: '15.00', category: 'loisirs', date: '2026-03-03' }],
+        rows: [{ id: 3, description: 'Cinema', amount: '15.00', category: 'loisirs', date: '2026-03-03' }],
       });
 
       const response = await request(app).get('/api/expenses/3');
@@ -156,13 +159,14 @@ describe('Expenses API', () => {
 
   // Teste la création d'une dépense et la gestion des erreurs de validation.
   describe('POST /api/expenses', () => {
+    // Cas succès: la création renvoie 201.
     it('creates an expense (201)', async () => {
       validateExpense.mockReturnValueOnce({ valid: true, errors: [] });
       pool.query.mockResolvedValueOnce({
         rows: [
           {
             id: 4,
-            label: 'Restaurant',
+            description: 'Restaurant',
             amount: '30.00',
             category: 'loisirs',
             date: '2026-03-04',
@@ -181,9 +185,9 @@ describe('Expenses API', () => {
 
       expect(response.status).toBe(201);
       expect(response.body.description).toBe('Restaurant');
-      expect(validateExpense).toHaveBeenCalledWith({ ...payload, label: 'Restaurant' });
+      expect(validateExpense).toHaveBeenCalledWith(payload);
       expect(pool.query).toHaveBeenCalledWith(
-        'INSERT INTO expenses (label, amount, category, date) VALUES ($1, $2, $3, $4) RETURNING *',
+        'INSERT INTO expenses (description, amount, category, date) VALUES ($1, $2, $3, $4) RETURNING *',
         ['Restaurant', 30, 'loisirs', '2026-03-04']
       );
     });
@@ -216,6 +220,7 @@ describe('Expenses API', () => {
 
   // Teste la modification d'une dépense existante et le cas introuvable.
   describe('PUT /api/expenses/:id', () => {
+    // Cas succès: mise à jour OK.
     it('updates an existing expense', async () => {
       validateExpense.mockReturnValueOnce({ valid: true, errors: [] });
       pool.query.mockResolvedValueOnce({
@@ -223,7 +228,7 @@ describe('Expenses API', () => {
         rows: [
           {
             id: 5,
-            label: 'Taxi',
+            description: 'Taxi',
             amount: '20.00',
             category: 'transport',
             date: '2026-03-04',
@@ -243,7 +248,7 @@ describe('Expenses API', () => {
       expect(response.status).toBe(200);
       expect(response.body.description).toBe('Taxi');
       expect(pool.query).toHaveBeenCalledWith(
-        'UPDATE expenses SET label=$1, amount=$2, category=$3, date=$4 WHERE id=$5 RETURNING *',
+        'UPDATE expenses SET description=$1, amount=$2, category=$3, date=$4, updated_at=NOW() WHERE id=$5 RETURNING *',
         ['Taxi', 20, 'transport', '2026-03-04', '5']
       );
     });

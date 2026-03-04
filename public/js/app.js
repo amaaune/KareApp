@@ -1,4 +1,5 @@
-const API = '/expenses';
+// URL de base de l'API backend.
+const API = '/api/expenses';
 
 const form        = document.getElementById('expense-form');
 const formTitle   = document.getElementById('form-title');

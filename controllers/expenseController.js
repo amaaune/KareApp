@@ -1,12 +1,15 @@
 const pool = require('../db');
 const { validateExpense } = require('../validators/expenseValidator');
 
-// Convertit une ligne SQL en format API (ajoute description à partir de label).
+// Convertit une ligne SQL en format API.
+// On renvoie description (métier) et label (compatibilité front actuel).
 function toApiExpense(expense) {
   if (!expense) return expense;
+  const description = expense.description ?? expense.label;
   return {
     ...expense,
-    description: expense.description ?? expense.label,
+    description,
+    label: expense.label ?? description,
   };
 }
 
@@ -62,20 +65,20 @@ async function getExpenseStats(req, res) {
 }
 
 // Crée une nouvelle dépense après validation des données.
-// Accepte description en entrée et l'enregistre dans label.
+// Accepte description ou label en entrée, puis enregistre en base dans description.
 async function createExpense(req, res) {
   const payload = {
     ...req.body,
-    label: req.body.label ?? req.body.description,
+    description: req.body.description ?? req.body.label,
   };
   const { valid, errors } = validateExpense(payload);
   if (!valid) return res.status(400).json({ errors });
 
-  const { label, amount, category, date } = payload;
+  const { description, amount, category, date } = payload;
   try {
     const result = await pool.query(
-      'INSERT INTO expenses (label, amount, category, date) VALUES ($1, $2, $3, $4) RETURNING *',
-      [label, amount, category, date]
+      'INSERT INTO expenses (description, amount, category, date) VALUES ($1, $2, $3, $4) RETURNING *',
+      [description, amount, category, date]
     );
     return res.status(201).json(toApiExpense(result.rows[0]));
   } catch (err) {
@@ -89,16 +92,16 @@ async function updateExpense(req, res) {
   const { id } = req.params;
   const payload = {
     ...req.body,
-    label: req.body.label ?? req.body.description,
+    description: req.body.description ?? req.body.label,
   };
   const { valid, errors } = validateExpense(payload);
   if (!valid) return res.status(400).json({ errors });
 
-  const { label, amount, category, date } = payload;
+  const { description, amount, category, date } = payload;
   try {
     const result = await pool.query(
-      'UPDATE expenses SET label=$1, amount=$2, category=$3, date=$4 WHERE id=$5 RETURNING *',
-      [label, amount, category, date, id]
+      'UPDATE expenses SET description=$1, amount=$2, category=$3, date=$4, updated_at=NOW() WHERE id=$5 RETURNING *',
+      [description, amount, category, date, id]
     );
     if (result.rowCount === 0) return res.status(404).json({ error: 'Expense not found' });
     return res.status(200).json(toApiExpense(result.rows[0]));

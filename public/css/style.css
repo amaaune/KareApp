@@ -185,6 +185,37 @@ tr:hover td { background: #f8fafc; }
 .info   { text-align: center; color: var(--muted); padding: 24px; }
 .error  { color: var(--danger); font-size: .88rem; }
 
+/* ── Modal / Overlay ─────────────────────────── */
+#modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(2,6,23,0.55);
+  z-index: 1200;
+  padding: 24px;
+}
+.modal {
+  width: 100%;
+  max-width: 520px;
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 20px 22px;
+  box-shadow: 0 10px 30px rgba(2,6,23,0.35);
+  border: 1px solid rgba(30,41,59,0.06);
+  animation: modalIn .18s ease;
+}
+.modal h3 { margin-bottom: 8px; }
+.modal p { color: var(--muted); margin-bottom: 14px; }
+.modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
+.modal-close { position: absolute; right: 18px; top: 12px; background: transparent; border: none; font-size: 20px; cursor: pointer; }
+
+@keyframes modalIn { from { transform: translateY(6px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+
+/* Danger button style */
+.btn-danger { background: var(--danger); color: #fff; padding: 8px 14px; border-radius: 8px; border: none; font-weight: 700; }
+.btn-danger:hover { background: var(--danger-h); }
+
 @media (max-width: 560px) {
   .form-row { grid-template-columns: 1fr; }
   table th:nth-child(3), table td:nth-child(3) { display: none; }

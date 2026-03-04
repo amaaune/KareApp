@@ -18,6 +18,15 @@ const tbody      = document.getElementById('expenses-body');
 const totalBadge = document.getElementById('total-badge');
 const totalsGrid = document.getElementById('totals-grid');
 
+// Modal elements
+const modalOverlay = document.getElementById('modal-overlay');
+const modalBody    = document.getElementById('modal-body');
+const modalConfirm = document.getElementById('modal-confirm');
+const modalCancel  = document.getElementById('modal-cancel');
+const modalClose   = document.getElementById('modal-close');
+
+let pendingDeleteId = null;
+
 // ── State ──────────────────────────────────────────────────────────────────
 let allExpenses  = [];
 let activeFilter = '';
@@ -128,10 +137,16 @@ function renderTable(expenses) {
       <td><span class="badge">${CATEGORY_LABELS[e.category] || e.category}</span></td>
       <td class="amount-cell">${parseFloat(e.amount).toFixed(2)} €</td>
       <td>
-        <button class="btn-edit"   onclick="startEdit(${JSON.stringify(e).replace(/"/g, '&quot;')})">✏️ Modifier</button>
-        <button class="btn-delete" onclick="deleteExpense(${e.id})">🗑️ Supprimer</button>
+        <button class="btn-edit" id="edit-${e.id}">✏️ Modifier</button>
+        <button class="btn-delete" id="del-${e.id}">🗑️ Supprimer</button>
       </td>`;
     tbody.appendChild(tr);
+    // attach edit listener
+    const editBtn = document.getElementById(`edit-${e.id}`);
+    if (editBtn) editBtn.addEventListener('click', () => startEdit(e));
+    // attach delete listener to open modal
+    const delBtn = document.getElementById(`del-${e.id}`);
+    if (delBtn) delBtn.addEventListener('click', () => promptDelete(e.id, e.label, parseFloat(e.amount).toFixed(2)));
   });
 
   const label = activeFilter ? 'Sous-total' : 'Total';
@@ -200,16 +215,49 @@ function resetForm() {
   clearError();
 }
 
-// ── Delete ───────────────────────────────────────────────────────────────────
+// ── Delete (API call) ───────────────────────────────────────────────────────
 async function deleteExpense(id) {
-  if (!confirm('Supprimer cette dépense ?')) return;
   try {
-    await fetch(`${API}/${id}`, { method: 'DELETE' });
-    loadExpenses();
-  } catch {
+    const res = await fetch(`${API}/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Suppression échouée');
+    await loadExpenses();
+  } catch (err) {
     alert('Erreur lors de la suppression.');
+    console.error(err);
   }
 }
+
+// ── Modal handling ─────────────────────────────────────────────────────────
+function promptDelete(id, label, amount) {
+  pendingDeleteId = id;
+  modalBody.innerHTML = `Supprimer <strong>${escapeHtml(label)}</strong> — <strong>${parseFloat(amount).toFixed(2)} €</strong> ?`;
+  modalOverlay.classList.remove('hidden');
+  // focus confirm button for accessibility
+  setTimeout(() => modalConfirm.focus(), 50);
+}
+
+function hideModal() {
+  pendingDeleteId = null;
+  modalOverlay.classList.add('hidden');
+}
+
+modalCancel.addEventListener('click', hideModal);
+modalClose.addEventListener('click', hideModal);
+modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) hideModal(); });
+modalConfirm.addEventListener('click', async () => {
+  if (!pendingDeleteId) return hideModal();
+  modalConfirm.disabled = true;
+  await deleteExpense(pendingDeleteId);
+  modalConfirm.disabled = false;
+  hideModal();
+});
+
+function escapeHtml(s) {
+  return (s + '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// expose for debugging if needed
+window.promptDelete = promptDelete;
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 dateInput.value = new Date().toISOString().split('T')[0];

@@ -11,6 +11,8 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Routes
+// Mount API under /api/expenses, keep /expenses for backward compatibility
+app.use('/api/expenses', expenseRoutes);
 app.use('/expenses', expenseRoutes);
 
 app.listen(port, () => {

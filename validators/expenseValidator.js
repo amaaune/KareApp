@@ -1,4 +1,4 @@
-const VALID_CATEGORIES = ['alimentaire', 'transport', 'logement', 'sante', 'loisirs', 'autre'];
+const VALID_CATEGORIES = ['alimentaire', 'transport', 'loisirs', 'autre'];
 
 /**
  * Valide les champs d'une dépense.
@@ -8,8 +8,11 @@ const VALID_CATEGORIES = ['alimentaire', 'transport', 'logement', 'sante', 'lois
 function validateExpense(data) {
   const errors = [];
 
-  if (!data.label || typeof data.label !== 'string' || data.label.trim() === '') {
-    errors.push('Le champ "label" est requis et doit être une chaîne non vide.');
+  const desc = data.description || data.label;
+  if (!desc || typeof desc !== 'string' || desc.trim() === '') {
+    errors.push('Le champ "description" est requis et doit être une chaîne non vide.');
+  } else if (desc.length > 200) {
+    errors.push('Le champ "description" doit contenir au maximum 200 caractères.');
   }
 
   if (data.amount === undefined || isNaN(Number(data.amount)) || Number(data.amount) <= 0) {

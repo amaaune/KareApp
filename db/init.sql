@@ -29,3 +29,18 @@ END $$;
 -- Finalisation: rend description obligatoire une fois la migration faite.
 ALTER TABLE expenses
   ALTER COLUMN description SET NOT NULL;
+
+-- Trigger pour maintenir updated_at automatiquement à chaque update.
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_set_updated_at ON expenses;
+CREATE TRIGGER trigger_set_updated_at
+BEFORE UPDATE ON expenses
+FOR EACH ROW
+EXECUTE PROCEDURE set_updated_at();

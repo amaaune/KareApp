@@ -1,4 +1,4 @@
-const VALID_CATEGORIES = ['alimentaire', 'transport', 'logement', 'sante', 'loisirs', 'autre'];
+const VALID_CATEGORIES = ['alimentaire', 'transport', 'loisirs', 'autre'];
 
 // Retourne le texte principal de la dépense.
 // On accepte "description" (contrat métier) et "label" (compatibilité existante).
@@ -18,6 +18,11 @@ function validateExpense(data) {
   // Vérifie qu'on a un texte non vide pour décrire la dépense.
   if (!expenseText) {
     errors.push('Le champ "description" est requis et doit être une chaîne non vide.');
+  const desc = data.description || data.label;
+  if (!desc || typeof desc !== 'string' || desc.trim() === '') {
+    errors.push('Le champ "description" est requis et doit être une chaîne non vide.');
+  } else if (desc.length > 200) {
+    errors.push('Le champ "description" doit contenir au maximum 200 caractères.');
   }
 
   // Limite la taille de la description à 200 caractères.

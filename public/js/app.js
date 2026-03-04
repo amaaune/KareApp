@@ -1,10 +1,11 @@
-// URL de base de l'API backend.
+// URLs de l'API backend.
 const API = '/api/expenses';
+const STATS_API = '/api/expenses/stats';
 
 const form        = document.getElementById('expense-form');
 const formTitle   = document.getElementById('form-title');
 const expenseId   = document.getElementById('expense-id');
-const labelInput  = document.getElementById('label');
+const descriptionInput  = document.getElementById('description');
 const amountInput = document.getElementById('amount');
 const dateInput   = document.getElementById('date');
 const catInput    = document.getElementById('category');
@@ -19,6 +20,15 @@ const tbody      = document.getElementById('expenses-body');
 const totalBadge = document.getElementById('total-badge');
 const totalsGrid = document.getElementById('totals-grid');
 
+// Modal elements
+const modalOverlay = document.getElementById('modal-overlay');
+const modalBody    = document.getElementById('modal-body');
+const modalConfirm = document.getElementById('modal-confirm');
+const modalCancel  = document.getElementById('modal-cancel');
+const modalClose   = document.getElementById('modal-close');
+
+let pendingDeleteId = null;
+
 // ── State ──────────────────────────────────────────────────────────────────
 let allExpenses  = [];
 let activeFilter = '';
@@ -27,8 +37,6 @@ let activeFilter = '';
 const CATEGORY_LABELS = {
   alimentaire: '🍎 Alimentaire',
   transport:   '🚗 Transport',
-  logement:    '🏠 Logement',
-  sante:       '💊 Santé',
   loisirs:     '🎮 Loisirs',
   autre:       '📦 Autre',
 };
@@ -56,10 +64,13 @@ async function loadExpenses() {
 
   try {
     const res  = await fetch(API);
-    allExpenses = await res.json();
-    loadingEl.classList.add('hidden');
-    renderTotals(allExpenses);
-    applyFilter();
+      allExpenses = await res.json();
+      // fetch server-side stats
+      const statsRes = await fetch(STATS_API).catch(() => null);
+      const stats = statsRes && statsRes.ok ? await statsRes.json() : null;
+      loadingEl.classList.add('hidden');
+      if (stats) renderTotalsFromStats(stats); else renderTotals(allExpenses);
+      applyFilter();
   } catch {
     loadingEl.textContent = 'Erreur de connexion à l\'API.';
   }
@@ -107,6 +118,30 @@ function renderTotals(expenses) {
     .join('');
 }
 
+function renderTotalsFromStats(stats) {
+  if (!Array.isArray(stats) || stats.length === 0) {
+    totalsGrid.innerHTML = '<p class="info">Aucune dépense enregistrée.</p>';
+    return;
+  }
+
+  const totalSum = stats.reduce((s, r) => s + parseFloat(r.total || 0), 0);
+  totalsGrid.innerHTML = stats
+    .sort((a, b) => parseFloat(b.total) - parseFloat(a.total))
+    .map(row => {
+      const cat = row.category;
+      const sum = parseFloat(row.total || 0);
+      const pct = totalSum ? Math.min(100, (sum / totalSum) * 100).toFixed(1) : 0;
+      return `
+      <div class="total-item">
+        <span class="total-label">${CATEGORY_LABELS[cat] || cat}</span>
+        <span class="total-amount">${sum.toFixed(2)} €</span>
+        <div class="total-bar-wrap">
+          <div class="total-bar" style="width:${pct}%"></div>
+        </div>
+      </div>`;
+    }).join('');
+}
+
 function renderTable(expenses) {
   tbody.innerHTML = '';
 
@@ -125,14 +160,20 @@ function renderTable(expenses) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${fmtDate(e.date)}</td>
-      <td>${e.label}</td>
+      <td>${e.description}</td>
       <td><span class="badge">${CATEGORY_LABELS[e.category] || e.category}</span></td>
       <td class="amount-cell">${parseFloat(e.amount).toFixed(2)} €</td>
       <td>
-        <button class="btn-edit"   onclick="startEdit(${JSON.stringify(e).replace(/"/g, '&quot;')})">✏️ Modifier</button>
-        <button class="btn-delete" onclick="deleteExpense(${e.id})">🗑️ Supprimer</button>
+        <button class="btn-edit" id="edit-${e.id}">✏️ Modifier</button>
+        <button class="btn-delete" id="del-${e.id}">🗑️ Supprimer</button>
       </td>`;
     tbody.appendChild(tr);
+    // attach edit listener
+    const editBtn = document.getElementById(`edit-${e.id}`);
+    if (editBtn) editBtn.addEventListener('click', () => startEdit(e));
+    // attach delete listener to open modal
+    const delBtn = document.getElementById(`del-${e.id}`);
+    if (delBtn) delBtn.addEventListener('click', () => promptDelete(e.id, e.description, parseFloat(e.amount).toFixed(2)));
   });
 
   const label = activeFilter ? 'Sous-total' : 'Total';
@@ -146,7 +187,7 @@ form.addEventListener('submit', async (e) => {
   clearError();
 
   const payload = {
-    label:    labelInput.value.trim(),
+    description: descriptionInput.value.trim(),
     amount:   parseFloat(amountInput.value),
     category: catInput.value,
     date:     dateInput.value,
@@ -165,14 +206,17 @@ form.addEventListener('submit', async (e) => {
     const data = await res.json();
 
     if (!res.ok) {
-      showError((data.errors || [data.error]).join(' • '));
+      const msg = Array.isArray(data.errors) ? data.errors.join(' • ') : (data.error || 'Erreur serveur');
+      showError(msg);
+      console.error('Validation error:', data);
       return;
     }
 
     resetForm();
     loadExpenses();
-  } catch {
-    showError('Erreur réseau.');
+  } catch (err) {
+    console.error('Submit error:', err);
+    showError('Erreur réseau : ' + err.message);
   }
 });
 
@@ -181,7 +225,7 @@ function startEdit(expense) {
   formTitle.textContent   = 'Modifier la dépense';
   submitBtn.textContent   = 'Enregistrer';
   expenseId.value         = expense.id;
-  labelInput.value        = expense.label;
+  descriptionInput.value  = expense.description;
   amountInput.value       = parseFloat(expense.amount).toFixed(2);
   dateInput.value         = expense.date.split('T')[0];
   catInput.value          = expense.category;
@@ -201,16 +245,49 @@ function resetForm() {
   clearError();
 }
 
-// ── Delete ───────────────────────────────────────────────────────────────────
+// ── Delete (API call) ───────────────────────────────────────────────────────
 async function deleteExpense(id) {
-  if (!confirm('Supprimer cette dépense ?')) return;
   try {
-    await fetch(`${API}/${id}`, { method: 'DELETE' });
-    loadExpenses();
-  } catch {
+    const res = await fetch(`${API}/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Suppression échouée');
+    await loadExpenses();
+  } catch (err) {
     alert('Erreur lors de la suppression.');
+    console.error(err);
   }
 }
+
+// ── Modal handling ─────────────────────────────────────────────────────────
+function promptDelete(id, label, amount) {
+  pendingDeleteId = id;
+  modalBody.innerHTML = `Supprimer <strong>${escapeHtml(label)}</strong> — <strong>${parseFloat(amount).toFixed(2)} €</strong> ?`;
+  modalOverlay.classList.remove('hidden');
+  // focus confirm button for accessibility
+  setTimeout(() => modalConfirm.focus(), 50);
+}
+
+function hideModal() {
+  pendingDeleteId = null;
+  modalOverlay.classList.add('hidden');
+}
+
+modalCancel.addEventListener('click', hideModal);
+modalClose.addEventListener('click', hideModal);
+modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) hideModal(); });
+modalConfirm.addEventListener('click', async () => {
+  if (!pendingDeleteId) return hideModal();
+  modalConfirm.disabled = true;
+  await deleteExpense(pendingDeleteId);
+  modalConfirm.disabled = false;
+  hideModal();
+});
+
+function escapeHtml(s) {
+  return (s + '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// expose for debugging if needed
+window.promptDelete = promptDelete;
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 dateInput.value = new Date().toISOString().split('T')[0];

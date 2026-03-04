@@ -22,8 +22,8 @@
         <input type="hidden" id="expense-id" />
 
         <div class="form-group">
-          <label for="label">Libellé</label>
-          <input type="text" id="label" placeholder="Ex: Courses Lidl" required />
+          <label for="description">Libellé</label>
+          <input type="text" id="description" placeholder="Ex: Courses Lidl" required />
         </div>
 
         <div class="form-row">
@@ -43,8 +43,6 @@
             <option value="">-- Choisir --</option>
             <option value="alimentaire">🍎 Alimentaire</option>
             <option value="transport">🚗 Transport</option>
-            <option value="logement">🏠 Logement</option>
-            <option value="sante">💊 Santé</option>
             <option value="loisirs">🎮 Loisirs</option>
             <option value="autre">📦 Autre</option>
           </select>
@@ -77,8 +75,6 @@
         <button class="filter-btn active" data-cat="">Toutes</button>
         <button class="filter-btn" data-cat="alimentaire">🍎 Alimentaire</button>
         <button class="filter-btn" data-cat="transport">🚗 Transport</button>
-        <button class="filter-btn" data-cat="logement">🏠 Logement</button>
-        <button class="filter-btn" data-cat="sante">💊 Santé</button>
         <button class="filter-btn" data-cat="loisirs">🎮 Loisirs</button>
         <button class="filter-btn" data-cat="autre">📦 Autre</button>
       </div>
@@ -102,6 +98,18 @@
 
   </main>
 
+  <!-- Confirmation modal -->
+  <div id="modal-overlay" class="hidden">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <button class="modal-close" id="modal-close" aria-label="Fermer">×</button>
+      <h3 id="modal-title">Confirmer la suppression</h3>
+      <p id="modal-body">Voulez-vous supprimer cette dépense ?</p>
+      <div class="modal-actions">
+        <button id="modal-confirm" class="btn-danger">Supprimer</button>
+        <button id="modal-cancel" class="btn-secondary">Annuler</button>
+      </div>
+    </div>
+  </div>
   <script src="js/app.js"></script>
 </body>
 </html>

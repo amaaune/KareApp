@@ -9,9 +9,10 @@ const {
   deleteExpense,
 } = require('../controllers/expenseController');
 
-router.get('/', getAllExpenses);
+// Stats first to avoid collision with /:id
 router.get('/stats', getExpenseStats);
 router.get('/:id', getExpenseById);
+router.get('/', getAllExpenses);
 router.post('/', createExpense);
 router.put('/:id', updateExpense);
 router.delete('/:id', deleteExpense);

@@ -1,9 +1,10 @@
-const API = '/expenses';
+const API = '/api/expenses';
+const STATS_API = '/api/expenses/stats';
 
 const form        = document.getElementById('expense-form');
 const formTitle   = document.getElementById('form-title');
 const expenseId   = document.getElementById('expense-id');
-const labelInput  = document.getElementById('label');
+const descriptionInput  = document.getElementById('description');
 const amountInput = document.getElementById('amount');
 const dateInput   = document.getElementById('date');
 const catInput    = document.getElementById('category');
@@ -64,10 +65,13 @@ async function loadExpenses() {
 
   try {
     const res  = await fetch(API);
-    allExpenses = await res.json();
-    loadingEl.classList.add('hidden');
-    renderTotals(allExpenses);
-    applyFilter();
+      allExpenses = await res.json();
+      // fetch server-side stats
+      const statsRes = await fetch(STATS_API).catch(() => null);
+      const stats = statsRes && statsRes.ok ? await statsRes.json() : null;
+      loadingEl.classList.add('hidden');
+      if (stats) renderTotalsFromStats(stats); else renderTotals(allExpenses);
+      applyFilter();
   } catch {
     loadingEl.textContent = 'Erreur de connexion à l\'API.';
   }
@@ -115,6 +119,30 @@ function renderTotals(expenses) {
     .join('');
 }
 
+function renderTotalsFromStats(stats) {
+  if (!Array.isArray(stats) || stats.length === 0) {
+    totalsGrid.innerHTML = '<p class="info">Aucune dépense enregistrée.</p>';
+    return;
+  }
+
+  const totalSum = stats.reduce((s, r) => s + parseFloat(r.total || 0), 0);
+  totalsGrid.innerHTML = stats
+    .sort((a, b) => parseFloat(b.total) - parseFloat(a.total))
+    .map(row => {
+      const cat = row.category;
+      const sum = parseFloat(row.total || 0);
+      const pct = totalSum ? Math.min(100, (sum / totalSum) * 100).toFixed(1) : 0;
+      return `
+      <div class="total-item">
+        <span class="total-label">${CATEGORY_LABELS[cat] || cat}</span>
+        <span class="total-amount">${sum.toFixed(2)} €</span>
+        <div class="total-bar-wrap">
+          <div class="total-bar" style="width:${pct}%"></div>
+        </div>
+      </div>`;
+    }).join('');
+}
+
 function renderTable(expenses) {
   tbody.innerHTML = '';
 
@@ -133,7 +161,7 @@ function renderTable(expenses) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${fmtDate(e.date)}</td>
-      <td>${e.label}</td>
+      <td>${e.description}</td>
       <td><span class="badge">${CATEGORY_LABELS[e.category] || e.category}</span></td>
       <td class="amount-cell">${parseFloat(e.amount).toFixed(2)} €</td>
       <td>
@@ -146,7 +174,7 @@ function renderTable(expenses) {
     if (editBtn) editBtn.addEventListener('click', () => startEdit(e));
     // attach delete listener to open modal
     const delBtn = document.getElementById(`del-${e.id}`);
-    if (delBtn) delBtn.addEventListener('click', () => promptDelete(e.id, e.label, parseFloat(e.amount).toFixed(2)));
+    if (delBtn) delBtn.addEventListener('click', () => promptDelete(e.id, e.description, parseFloat(e.amount).toFixed(2)));
   });
 
   const label = activeFilter ? 'Sous-total' : 'Total';
@@ -160,7 +188,7 @@ form.addEventListener('submit', async (e) => {
   clearError();
 
   const payload = {
-    label:    labelInput.value.trim(),
+    description: descriptionInput.value.trim(),
     amount:   parseFloat(amountInput.value),
     category: catInput.value,
     date:     dateInput.value,
@@ -195,7 +223,7 @@ function startEdit(expense) {
   formTitle.textContent   = 'Modifier la dépense';
   submitBtn.textContent   = 'Enregistrer';
   expenseId.value         = expense.id;
-  labelInput.value        = expense.label;
+  descriptionInput.value  = expense.description;
   amountInput.value       = parseFloat(expense.amount).toFixed(2);
   dateInput.value         = expense.date.split('T')[0];
   catInput.value          = expense.category;

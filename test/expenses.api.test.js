@@ -69,6 +69,16 @@ describe('Expenses API', () => {
       expect(response.status).toBe(500);
       expect(response.body).toEqual({ error: 'Internal server error' });
     });
+
+    it('returns 200 with an empty array when there are no expenses', async () => {
+      pool.query.mockResolvedValueOnce({ rows: [] });
+
+      const response = await request(app).get('/api/expenses');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual([]);
+      expect(pool.query).toHaveBeenCalledWith('SELECT * FROM expenses ORDER BY date DESC');
+    });
   });
 
   // Teste la récupération d'une dépense par son id.
@@ -132,6 +142,15 @@ describe('Expenses API', () => {
 
       expect(response.status).toBe(500);
       expect(response.body).toEqual({ error: 'Internal server error' });
+    });
+
+    it('returns 200 with an empty array when there are no stats yet', async () => {
+      pool.query.mockResolvedValueOnce({ rows: [] });
+
+      const response = await request(app).get('/api/expenses/stats');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual([]);
     });
   });
 
